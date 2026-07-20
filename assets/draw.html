@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clinical Drawing Engine</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: transparent;
+            touch-action: none;
+        }
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+        
+        let dpr = window.devicePixelRatio || 1;
+        let drawing = false;
+        let points = [];
+        
+        // Setup High-DPI Canvas
+        function resize() {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            ctx.scale(dpr, dpr);
+            
+            // Re-apply style
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3.5;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function startDrawing(e) {
+            drawing = true;
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            points = [{ x, y }];
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            points.push({ x, y });
+
+            // Quadratic curve for ultra-smoothness
+            if (points.length > 2) {
+                const xc = (points[points.length - 2].x + points[points.length - 1].x) / 2;
+                const yc = (points[points.length - 2].y + points[points.length - 1].y) / 2;
+                ctx.quadraticCurveTo(points[points.length - 2].x, points[points.length - 2].y, xc, yc);
+                ctx.stroke();
+            }
+        }
+
+        function endDrawing() {
+            drawing = false;
+        }
+
+        // Pointer Events (Handles Stylus/Mouse/Touch)
+        canvas.addEventListener('pointerdown', startDrawing);
+        canvas.addEventListener('pointermove', draw);
+        canvas.addEventListener('pointerup', endDrawing);
+        canvas.addEventListener('pointercancel', endDrawing);
+
+        // API for Flutter
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        }
+
+        function getBase64Image() {
+            return canvas.toDataURL('image/png');
+        }
+
+        // Notify Flutter engine is ready
+        window.addEventListener('load', () => {
+            if (window.flutter_inappwebview) {
+                window.flutter_inappwebview.callHandler('onReady');
+            }
+        });
+    </script>
+</body>
+</html>
