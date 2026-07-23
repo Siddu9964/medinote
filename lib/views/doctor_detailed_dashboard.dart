@@ -47,8 +47,8 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
   String _branchName = "GM Hospital";
 
   // ── Design Tokens (local overrides from Command Center palette) ──────────
-  static const Color _pageBg = Color(0xFFF3EFE6);
-  static const Color _activeColor = Color(0xFF22C55E);
+  static const Color _pageBg = AppColors.paper;
+  static const Color _activeColor = AppColors.teal;
   static const Color _completedColor = Color(0xFF94A3B8);
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -908,27 +908,18 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
         // ── Fixed Command Header ──────────────────────────────────────────
         _buildGradientHeader(r),
 
+        // Add spacing to clear the overlapping stats from the Hero
+        const SizedBox(height: 48),
+
         // ── Live Vitals (Full Width) ──────────────────────────────────────
         Padding(
-          padding: EdgeInsets.fromLTRB(r.hPad, 16, r.hPad, 16),
+          padding: EdgeInsets.fromLTRB(r.hPad, 0, r.hPad, 16),
           child: _buildLiveVitalsGraph(),
         ),
 
-        // ── Two-column body ───────────────────────────────────────────────
+        // ── Body ───────────────────────────────────────────────
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Left: Appointment list (60%) ──────────────────────────
-              Expanded(flex: 60, child: _buildAppointmentColumn(r)),
-
-              // ── Divider ───────────────────────────────────────────────
-              Container(width: 1, color: AppColors.border),
-
-              // ── Right: Contextual Action Panel (40%) ────────────────────────────
-              Expanded(flex: 40, child: _buildContextualPanel(r)),
-            ],
-          ),
+          child: _buildAppointmentColumn(r),
         ),
       ],
     );
@@ -1297,7 +1288,7 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'No pending patients for this filter.',
           style: AppStyles.caption,
@@ -1369,49 +1360,43 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── FIXED: Gradient header ─────────────────────────────────────
+        // ── HERO ─────────────────────────────────────
         _buildGradientHeader(r),
 
-        // ── FIXED: Live Vitals Graph (Neo-Minimalist) ─────────────────
+        // Add spacing to clear the overlapping stats from the Hero
+        const SizedBox(height: 48),
+
+        // ── LIVE VITALS GRAPH (Neo-Minimalist) ─────────────────
         Padding(
-          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
+          padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
           child: _buildLiveVitalsGraph(),
         ),
 
-        // ── FIXED: Quick Action Dock ──────────────────────────────────
-        Padding(
-          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-          child: _buildQuickActionDock(),
-        ),
-
-        // ── FIXED: Search bar ──────────────────────────────────────────
+        // ── SEARCH BAR ──────────────────────────────────────────
         Padding(
           padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 12),
           child: _buildSearchBar(),
         ),
 
-        // ── FIXED: Section header + filter tabs ───────────────────────
+        // ── SECTION HEADER & TABS ───────────────────────
         Padding(
           padding: EdgeInsets.symmetric(horizontal: hPad),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSectionHeader(),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               _buildFilterTabs(),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
 
-        // ── Fine separator ─────────────────────────────────────────────
-        Container(height: 1, color: AppColors.border),
-
-        // ── SCROLLABLE: Patient cards only ─────────────────────────────
+        // ── SCROLLABLE: Patient cards ─────────────────────────────
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadData,
-            color: AppColors.primary,
+            color: AppColors.teal,
             backgroundColor: Colors.white,
             child: _filteredAppointments.isEmpty
                 ? LayoutBuilder(
@@ -1426,7 +1411,7 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
                     ),
                   )
                 : ListView.builder(
-                    padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 120),
+                    padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 120), // Bottom padding for sticky nav
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
@@ -1575,192 +1560,103 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
       child: SlideTransition(
         position: _headerSlide,
         child: Container(
-          decoration: const BoxDecoration(
-            gradient: AppColors.cmdHeaderGradient,
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(r.hPad, 20, r.hPad, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Doctor info row ───────────────────────────────────────
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Greeting + live clock
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.wb_sunny_outlined,
-                                      color: Colors.white54,
-                                      size: 12,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      _greeting,
-                                      style: const TextStyle(
-                                        color: Colors.white54,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white24,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        _branchName.replaceAll('GM Hospital - ', ''),
-                                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    // Live time chip
-                                    StreamBuilder<DateTime>(
-                                      stream: Stream.periodic(
-                                        const Duration(seconds: 1),
-                                        (_) => DateTime.now(),
-                                      ),
-                                      builder: (ctx, snap) {
-                                        final t = snap.data ?? DateTime.now();
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.12,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              AppRadius.sm,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.15,
-                                              ),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            DateFormat('hh:mm a').format(t),
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // Refresh Option
-                                    GestureDetector(
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        setState(() => _isPageLoading = true);
-                                        _loadData();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.12,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            AppRadius.sm,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.15,
-                                            ),
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.refresh_rounded,
-                                          color: Colors.white70,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                // Doctor name — prominent
-                                Text(
-                                  doctorName,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: r.isPhone ? 22 : 26,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                // Availability + date
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF86EFAC),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Available  •  ${DateFormat('EEE, MMM d').format(DateTime.now())}',
-                                      style: const TextStyle(
-                                        color: Colors.white60,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                // Hospital badge
-                                _buildHospitalBadge(),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          _buildProfileAvatar(r),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // ── Stats row ──────────────────────────────────────────
-                      _buildHeaderStatsRow(),
-                      const SizedBox(height: 24),
-                    ],
+          // No bottom radius here; we'll let the overlapping stats row break the bounds
+          padding: EdgeInsets.only(bottom: 24), // Space for overlapping stats
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Hero Background
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(r.hPad, r.safePadding.top + 20, r.hPad, 60),
+                decoration: const BoxDecoration(
+                  color: AppColors.ink,
+                  image: DecorationImage(
+                    image: AssetImage('assets/noise.png'), // Subtle noise texture if available, fallback to solid
+                    opacity: 0.05,
+                    fit: BoxFit.cover,
                   ),
                 ),
-
-                // ── Wave transition ──────────────────────────────────────────
-                Container(
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    color: _pageBg,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(AppRadius.xl2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Row: Hospital + Profile
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildHospitalBadge(),
+                        _buildProfileAvatar(r),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    // Greeting
+                    Text(
+                      _greeting,
+                      style: AppStyles.functionalLabel.copyWith(
+                        color: AppColors.mutedSoft,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      doctorName,
+                      style: AppStyles.editorialHeading.copyWith(
+                        color: Colors.white,
+                        fontSize: r.isPhone ? 32 : 40,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Date & Status
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.teal.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6, height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.teal,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'On Duty',
+                                style: AppStyles.functionalLabel.copyWith(
+                                  color: AppColors.teal,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          DateFormat('EEEE, MMMM d').format(DateTime.now()),
+                          style: AppStyles.functionalLabel.copyWith(
+                            color: AppColors.mutedSoft,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // Overlapping Stats Row
+              Positioned(
+                left: r.hPad,
+                right: r.hPad,
+                bottom: -24,
+                child: _buildHeaderStatsRow(),
+              ),
+            ],
           ),
         ),
       ),
@@ -1769,27 +1665,26 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
 
   Widget _buildHospitalBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(
-            Icons.local_hospital_outlined,
-            color: Colors.white60,
-            size: 10,
+            Icons.local_hospital_rounded,
+            color: AppColors.mutedSoft,
+            size: 14,
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 6),
           Text(
             _doctorUser?.hospitalName ?? 'GM Hospital',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+            style: AppStyles.functionalLabel.copyWith(
+              color: AppColors.mutedSoft,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -1801,17 +1696,16 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
     return Hero(
       tag: 'profile_photo',
       child: Container(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.25),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
-            width: 1.5,
+            color: AppColors.line.withValues(alpha: 0.2),
+            width: 1,
           ),
         ),
         child: CircleAvatar(
-          radius: r.isPhone ? 30 : 38,
+          radius: r.isPhone ? 22 : 28,
           backgroundImage:
               _doctorUser?.photo != null && _doctorUser!.photo!.isNotEmpty
               ? NetworkImage(_getProfileImageUrl(_doctorUser!.photo))
@@ -1826,69 +1720,81 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
         ? _completedToday / _totalPatientsToday
         : 0.0;
 
-    return Row(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.cardFloat,
+        border: Border.all(color: AppColors.line, width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem('Total', _totalPatientsToday.toString(), AppColors.textMain),
+          Container(width: 1, height: 30, color: AppColors.line),
+          _buildStatItem('Done', _completedToday.toString(), AppColors.muted),
+          Container(width: 1, height: 30, color: AppColors.line),
+          _buildStatItem('Active', _pendingToday.toString(), AppColors.teal),
+          Container(width: 1, height: 30, color: AppColors.line),
+          _buildStatProgress(completion),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _buildStatChip(
-          'Total',
-          _totalPatientsToday,
-          Icons.people_outline_rounded,
+        Text(
+          value,
+          style: AppStyles.editorialHeading.copyWith(
+            color: color,
+            fontSize: 22,
+            fontStyle: FontStyle.normal, // Override italic for raw stats
+          ),
         ),
-        const SizedBox(width: 8),
-        _buildStatChip(
-          'Done',
-          _completedToday,
-          Icons.check_circle_outline_rounded,
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: AppStyles.functionalLabel.copyWith(
+            color: AppColors.muted,
+            fontSize: 10,
+          ),
         ),
-        const SizedBox(width: 8),
-        _buildStatChip('Active', _pendingToday, Icons.radio_button_on_rounded),
-        const SizedBox(width: 8),
-        // Progress bar chip
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.sm + 4),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Progress',
-                      style: TextStyle(
-                        color: Colors.white60,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      '${(completion * 100).round()}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: completion,
-                    backgroundColor: Colors.white.withValues(alpha: 0.18),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFF86EFAC),
-                    ),
-                    minHeight: 6,
-                  ),
-                ),
-              ],
+      ],
+    );
+  }
+
+  Widget _buildStatProgress(double completion) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '${(completion * 100).round()}%',
+          style: AppStyles.functionalBody.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: 50,
+          height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.line,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: completion,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.teal,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
         ),
@@ -2085,67 +1991,46 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
+                  horizontal: 16,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  gradient: isActive
-                      ? const LinearGradient(
-                          colors: [AppColors.headerStart, AppColors.headerEnd],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: isActive ? null : Colors.white,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  color: isActive ? AppColors.teal : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
                   border: Border.all(
-                    color: isActive ? Colors.transparent : AppColors.border,
+                    color: isActive ? AppColors.teal : AppColors.line,
                     width: 1,
                   ),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: AppColors.headerEnd.withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : AppShadows.subtle,
+                  boxShadow: isActive ? AppShadows.tealGlow(intensity: 0.2) : null,
                 ),
                 child: Row(
                   children: [
                     Text(
                       filter,
-                      style: TextStyle(
-                        color: isActive
-                            ? Colors.white
-                            : AppColors.textSecondary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                        letterSpacing: 0.2,
+                      style: AppStyles.functionalLabel.copyWith(
+                        color: isActive ? Colors.white : AppColors.muted,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(width: 6),
                     // Count badge
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
+                        horizontal: 6,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
                         color: isActive
                             ? Colors.white.withValues(alpha: 0.25)
-                            : AppColors.divider,
+                            : AppColors.line,
                         borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       child: Text(
                         count.toString(),
-                        style: TextStyle(
-                          color: isActive
-                              ? Colors.white
-                              : AppColors.textSecondary,
+                        style: AppStyles.clinicalData.copyWith(
+                          color: isActive ? Colors.white : AppColors.mutedSoft,
+                          fontWeight: FontWeight.w700,
                           fontSize: 10,
-                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
@@ -2165,21 +2050,22 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
 
   Widget _buildLiveVitalsGraph() {
     return Container(
-      height: 80,
+      height: 90,
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: AppShadows.neoDiffuse,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: AppDecorations.glassCard.copyWith(
+        color: Colors.white.withValues(alpha: 0.6),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+        boxShadow: AppShadows.glass,
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.2),
+              color: AppColors.teal.withValues(alpha: 0.1),
               shape: BoxShape.circle,
+              border: Border.all(color: AppColors.teal.withValues(alpha: 0.2)),
             ),
             child: AnimatedBuilder(
               animation: _pulseController,
@@ -2187,13 +2073,13 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
                 scale: 1.0 + (_pulseController.value * 0.15),
                 child: const Icon(
                   Icons.monitor_heart_outlined,
-                  color: AppColors.primary,
-                  size: 20,
+                  color: AppColors.teal,
+                  size: 22,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: AnimatedBuilder(
               animation: _pulseController,
@@ -2201,7 +2087,7 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
                 return CustomPaint(
                   painter: _LiveVitalsPainter(
                     progress: _pulseController.value,
-                    color: AppColors.primary,
+                    color: AppColors.teal,
                   ),
                 );
               },
@@ -2212,33 +2098,32 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
+              Text(
                 'LIVE SYSTEM',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
-                  color: AppColors.textTertiary,
+                style: AppStyles.functionalLabel.copyWith(
+                  fontSize: 9,
+                  color: AppColors.mutedSoft,
+                  letterSpacing: 1.5,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: AppColors.success,
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.teal,
                       shape: BoxShape.circle,
+                      boxShadow: AppShadows.colorGlow(AppColors.teal, intensity: 0.4),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
+                  Text(
                     'Online',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                    style: AppStyles.functionalLabel.copyWith(
+                      color: AppColors.textMain,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -2252,14 +2137,21 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
 
   Widget _buildQuickActionDock() {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
+      margin: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.cardFloat,
+        border: Border.all(color: AppColors.line),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildDockItem(Icons.qr_code_scanner_rounded, 'Scan Ink', AppColors.primary),
-          _buildDockItem(Icons.person_add_alt_1_rounded, 'New Patient', AppColors.secondary),
-          _buildDockItem(Icons.mic_none_rounded, 'Voice Note', const Color(0xFF6366F1)),
-          _buildDockItem(Icons.history_rounded, 'History', AppColors.warning),
+          _buildDockItem(Icons.edit_note_rounded, 'New Note', AppColors.teal),
+          _buildDockItem(Icons.qr_code_scanner_rounded, 'Scan', AppColors.gold),
+          _buildDockItem(Icons.person_add_alt_1_rounded, 'Add Patient', AppColors.textMain),
+          _buildDockItem(Icons.history_rounded, 'History', AppColors.muted),
         ],
       ),
     );
@@ -2271,13 +2163,12 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
       child: Column(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: color.withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              boxShadow: AppShadows.neoDiffuse,
-              border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+              border: Border.all(color: color.withValues(alpha: 0.15)),
             ),
             child: Center(
               child: Icon(icon, color: color, size: 24),
@@ -2286,10 +2177,9 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
+            style: AppStyles.functionalLabel.copyWith(
               fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textSecondary,
+              color: AppColors.textMain,
             ),
           ),
         ],
@@ -2337,23 +2227,32 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
         HapticFeedback.selectionClick();
       },
       child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.05)
-              : AppColors.surface,
-          boxShadow: isSelected
-              ? AppShadows.tealGlow(intensity: 0.15)
-              : AppShadows.medium,
+          borderRadius: BorderRadius.circular(AppRadius.lg + 8),
+          gradient: LinearGradient(
+            colors: isSelected 
+              ? [AppColors.primary.withValues(alpha: 0.08), AppColors.primary.withValues(alpha: 0.02)]
+              : [Colors.white, Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.06),
+              blurRadius: isSelected ? 24 : 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
           border: Border.all(
             color: isSelected
-                ? AppColors.primary
-                : AppColors.border.withValues(alpha: 0.6),
+                ? AppColors.primary.withValues(alpha: 0.6)
+                : Colors.grey.withValues(alpha: 0.15),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(AppRadius.lg + 4),
           child: Stack(
             children: [
               // Main content

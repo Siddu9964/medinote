@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
@@ -9,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:google_mlkit_digital_ink_recognition/google_mlkit_digital_ink_recognition.dart'
     as ml;
+import 'package:http/http.dart' as http;
 import '../models/appointment.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
@@ -24,7 +26,23 @@ import 'package:google_mlkit_digital_ink_recognition/google_mlkit_digital_ink_re
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+
+// -------------------------------------------------------------
+// V4 DESIGN SYSTEM CONSTANTS
+// -------------------------------------------------------------
+const Color _v4PrimaryGreen = Color(0xFF1F6B4A);
+const Color _v4CreamBg = Color(0xFFF3EFE6);
+const Color _v4Success = Color(0xFF2E8B57);
+const Color _v4Warning = Color(0xFFF59E0B);
+const Color _v4Error = Color(0xFFDC2626);
+const Color _v4Divider = Color(0xFFE8DED0);
+const Color _v4TextPrimary = Color(0xFF24332A);
+const Color _v4TextSecondary = Color(0xFF6E6E6E);
+const Color _v4White = Color(0xFFFFFFFF);
+
+final String _openAiApiKey = dotenv.env['OPENAI_API_KEY'] ?? "";
 
 // -------------------------------------------------------------
 // CUSTOM HIGHLIGHTING CONTROLLER
@@ -611,6 +629,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
   Timer? _inkRecognitionTimer;
   final ChangeNotifier _inkRepaintNotifier = ChangeNotifier();
   final List<ml.Ink> _inkUndoStack = [];
+  bool _isAIProcessing = false;
+  String _patientContext = "Fetching patient history...";
 
   // -- Speech to Text ----------------------------------------
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -768,6 +788,24 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
         // setState(() => _showStylusInk = false);
       }
     });
+
+    _fetchPatientContext();
+  }
+
+  Future<void> _fetchPatientContext() async {
+    try {
+      final records = await ApiService().getPrescriptionsRaw(patientId: _appointment.patientId);
+      if (records.isNotEmpty) {
+        final recent = records.first;
+        setState(() {
+          _patientContext = "Recent diagnosis: ${recent['diagnosis'] ?? 'None'}, Medicines: ${recent['medicines'] ?? 'None'}, Tests: ${recent['lab_tests'] ?? 'None'}";
+        });
+      } else {
+        setState(() => _patientContext = "No prior history.");
+      }
+    } catch (e) {
+      setState(() => _patientContext = "Failed to load history.");
+    }
   }
 
   @override
@@ -1183,19 +1221,189 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
     try {
       final candidates = await _digitalInkRecognizer.recognize(_ink);
       if (candidates.isNotEmpty) {
-        final text = candidates.first.text;
+        final rawText = candidates.first.text;
+        final candidateList = candidates.take(3).map((e) => e.text).toList();
+        
         setState(() {
-          if (_notesCtrl.text.isNotEmpty && !_notesCtrl.text.endsWith(' ')) {
-            _notesCtrl.text += ' ';
-          }
-          _notesCtrl.text += text;
+          _isAIProcessing = true;
+          // Clear ink immediately so user can keep writing
           _ink.strokes.clear();
           _inkSuggestions.clear();
           _inkUndoStack.clear();
         });
         _inkRepaintNotifier.notifyListeners();
+
+        // 2. Pass candidates to AI Contextual Correction Layer
+        final aiResult = await _correctTextWithAI(candidateList);
+
+        setState(() => _isAIProcessing = false);
+
+        int confidence = aiResult['confidence'] ?? 100;
+        String recognizedText = aiResult['recognized_text'] ?? rawText;
+        List<String> alternatives = List<String>.from(aiResult['alternatives'] ?? []);
+
+        if (confidence < 90 && alternatives.isNotEmpty) {
+          _showAlternativesDialog(recognizedText, alternatives);
+        } else {
+          setState(() {
+            if (_notesCtrl.text.isNotEmpty && !_notesCtrl.text.endsWith(' ') && !_notesCtrl.text.endsWith('\n')) {
+              _notesCtrl.text += ' ';
+            }
+            _notesCtrl.text += recognizedText;
+          });
+        }
       }
-    } catch (_) {}
+    } catch (_) {
+      setState(() => _isAIProcessing = false);
+    }
+  }
+
+  void _showAlternativesDialog(String bestGuess, List<String> alternatives) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final allOptions = [bestGuess, ...alternatives].toSet().toList();
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: Colors.white,
+          child: Container(
+            width: 400,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: _v4Warning, size: 28),
+                    const SizedBox(width: 12),
+                    const Text('Low Confidence', style: TextStyle(color: _slate, fontWeight: FontWeight.w800, fontSize: 18)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text('The handwritten stroke was unclear. Select the correct medical term:', style: TextStyle(color: _slate.withValues(alpha: 0.7), fontSize: 14)),
+                const SizedBox(height: 24),
+                ...allOptions.map((term) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          if (_notesCtrl.text.isNotEmpty && !_notesCtrl.text.endsWith(' ') && !_notesCtrl.text.endsWith('\n')) {
+                            _notesCtrl.text += ' ';
+                          }
+                          _notesCtrl.text += term;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: _v4CreamBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: _v4Divider),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(term, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: _v4PrimaryGreen))),
+                            const Icon(Icons.check_circle_outline, color: _v4PrimaryGreen),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  String _buildSystemPrompt() {
+    return '''You are an expert Medical Prescription Recognition AI.
+Your responsibility is to convert a doctor's handwritten prescription into the most accurate medical text possible.
+This is NOT normal OCR. This is medical handwriting interpretation.
+
+OBJECTIVE
+Recognize exactly what the doctor intended to write.
+Do not generate random English words. Always prioritize medical terminology.
+
+RULES
+Never guess random words. Never replace medicine names with similar English words.
+Always use medical reasoning, medical context, and analyze sentence context.
+Always analyze nearby words and prescription format.
+
+MEDICINE MATCHING
+Compare every recognized word against Generic Medicines, Brand Medicines, Hospital Medicine Database, Medical Dictionary, and Drug Names.
+
+LAB TEST MATCHING
+Recognize CBC, LFT, KFT, ECG, MRI, CT, X-Ray, Echo, Blood Sugar, HbA1c, Urine Test, Lipid Profile, Thyroid Profile, Vitamin D, and all common laboratory investigations.
+
+MEDICAL ABBREVIATIONS
+Understand Tab, Cap, Inj, Syp, OD, BD, TDS, QID, SOS, HS, PO, IV, IM, SC, AC, PC, PRN, Stat, Rx, Dx.
+
+DOSAGE
+Recognize 500 mg, 250 mg, 650 mg, 5 ml, 10 ml, 1-0-1, 1-1-1, 0-1-0, ½ Tablet, Morning, Night, Before Food, After Food, SOS, For 5 Days, For 7 Days.
+
+HANDWRITING
+Understand Connected Letters, Curved Letters, Fast Writing, Missing Strokes, Broken Characters, Joined Characters, Overlapping Characters, Incomplete Letters, Slanted Writing, Medical Shortcuts.
+
+MEDICAL CONTEXT
+If handwriting is unclear never invent words. Instead predict the most probable medical term using:
+Department & Specialization: ${_doctor.specialization}
+Patient Context & Diagnosis: $_patientContext
+Symptoms: ${_appointment.complaint ?? "None"}
+Previous Text in Prescription: ${_notesCtrl.text.trim()}
+
+OUTPUT
+Return JSON EXACTLY in this format:
+{
+  "recognized_text": "...",
+  "confidence": 98,
+  "alternatives": ["...", "...", "..."],
+  "reason": "Why this medical word was selected."
+}''';
+  }
+
+  Future<Map<String, dynamic>> _correctTextWithAI(List<String> rawCandidates) async {
+    try {
+      final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_openAiApiKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'response_format': { "type": "json_object" },
+          'messages': [
+            {
+              'role': 'system',
+              'content': _buildSystemPrompt()
+            },
+            {
+              'role': 'user',
+              'content': 'Top ML Kit OCR Guesses: ${rawCandidates.join(', ')}'
+            }
+          ],
+          'temperature': 0.1,
+          'max_tokens': 250,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices'][0]['message']['content'].toString().trim();
+        return jsonDecode(content) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint("AI Correction Error: $e");
+    }
+    return {'recognized_text': rawCandidates.isNotEmpty ? rawCandidates.first : '', 'confidence': 100};
   }
 
   // -------------------------------------------------------------
@@ -1650,7 +1858,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
       _rxCardInitialized = true;
     }
     return Scaffold(
-      backgroundColor: _slateLight,
+      backgroundColor: _v4CreamBg,
       resizeToAvoidBottomInset: false,
       appBar: _buildAppBar(),
       body: _isDigitalMode
@@ -1660,158 +1868,180 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
   }
 
   // ---------------------------------------------------------
-  //  APP BAR  Command Center Edition
+  //  APP BAR — Command Center Edition
   // ---------------------------------------------------------
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: const Color(
-        0xFF0F172A,
-      ), // Deep slate  clinical authority
-      elevation: 0,
-      centerTitle: false,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white60,
-          size: 18,
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(70),
+      child: AppBar(
+        backgroundColor: _v4PrimaryGreen,
+        elevation: 0,
+        centerTitle: false,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
         ),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: _teal,
-              shape: BoxShape.circle,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_hospital_rounded, color: _v4PrimaryGreen, size: 20),
             ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'CLINICAL PORTAL',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2.5,
-                  color: Colors.white70,
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Clinical Portal',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70,
+                    letterSpacing: 1.0,
+                  ),
                 ),
-              ),
-              Text(
-                _appointment.patientName,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white54,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          color: Colors.white.withValues(alpha: 0.08),
-          height: 1,
-        ),
-      ),
-      actions: [
-        // Mode toggle  larger and more authoritative
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-          ),
-          child: Row(
-            children: [
-              _modeToggle(
-                'Drawing',
-                Icons.draw_rounded,
-                _isDigitalMode,
-                () => setState(() => _isDigitalMode = true),
-              ),
-              _modeToggle(
-                'Smart Form',
-                Icons.text_snippet_rounded,
-                !_isDigitalMode,
-                () => setState(() => _isDigitalMode = false),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Save button  prominent with strong gradient
-        GestureDetector(
-          onTap: _isSubmitting ? null : _submitPrescription,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_teal, Color(0xFF0F766E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: _teal.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                const SizedBox(height: 2),
+                const Text(
+                  'Prescription',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Row(
-                    children: [
-                      Icon(
-                        Icons.save_alt_rounded,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Submit',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 10,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+          ],
         ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
-          onSelected: (val) {
-            if (val == 'print') _printPrescription();
-            if (val == 'pdf') _exportPdf();
-            if (val == 'share') _sharePrescription();
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'print',
-              child: Row(
+        actions: [
+          // iOS Segmented Mode Toggle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () => setState(() => _isDigitalMode = true),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _isDigitalMode ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.draw_rounded, size: 14, color: _isDigitalMode ? _v4PrimaryGreen : Colors.white),
+                        const SizedBox(width: 4),
+                        Text('Pen', style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _isDigitalMode ? _v4PrimaryGreen : Colors.white,
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _isDigitalMode = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: !_isDigitalMode ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.text_snippet_rounded, size: 14, color: !_isDigitalMode ? _v4PrimaryGreen : Colors.white),
+                        const SizedBox(width: 4),
+                        Text('Note', style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: !_isDigitalMode ? _v4PrimaryGreen : Colors.white,
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Finish Button
+          GestureDetector(
+            onTap: _isSubmitting ? null : _submitPrescription,
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                color: _v4Error,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: _v4Error.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'FINISH',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
+            onSelected: (val) {
+              if (val == 'print') _printPrescription();
+              if (val == 'pdf') _exportPdf();
+              if (val == 'share') _sharePrescription();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'print',
+                child: Row(
                 children: [
                   Icon(Icons.print_rounded, size: 18),
                   SizedBox(width: 10),
@@ -1843,8 +2073,9 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
         ),
         const SizedBox(width: 8),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _modeToggle(
     String title,
@@ -1898,15 +2129,22 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
   Widget _buildDrawingBoard(R r, Size s) {
     return Stack(
       children: [
-        // -- Canvas
+        // -- Canvas (Premium Paper Look)
         Positioned.fill(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _buildPageCanvas(
-              _drawCtrl.currentPage,
-              s.width,
-              s.height,
-              key: ValueKey(_drawCtrl.currentPage),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              height: s.height * 0.75, // Approximating 70-75% height to leave room for header
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _buildPageCanvas(
+                  _drawCtrl.currentPage,
+                  s.width * 0.85, // Give some horizontal breathing room
+                  s.height * 0.75,
+                  key: ValueKey(_drawCtrl.currentPage),
+                ),
+              ),
             ),
           ),
         ),
@@ -2125,8 +2363,20 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
           child: Center(child: _buildPageSelector()),
         ),
 
-        // -- Dock
-        Positioned(bottom: 100, right: 12, child: _buildFloatingDock()),
+        // -- Bottom Toolbar (Rx, Lab, etc)
+        Positioned(
+          bottom: 24,
+          left: 0,
+          right: 0,
+          child: Center(child: _buildFloatingDock()),
+        ),
+
+        // -- Bottom Actions (Floating)
+        Positioned(
+          top: 140,
+          right: 24,
+          child: _buildBottomActions(),
+        ),
 
         // -- DRAGGABLE RX CARD
         if (_rxCardVisible)
@@ -3246,70 +3496,80 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
   // -- Integrated Patient Header (HUD + Vitals in one card) ------------------
   Widget _buildIntegratedPatientHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        color: _v4White,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // - Row 1: Patient Primary Info
           Row(
             children: [
-              // Hospital icon
+              // Avatar
               Container(
-                width: 38,
-                height: 38,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [_teal, Color(0xFF0F766E)],
+                    colors: [_v4PrimaryGreen, _v4Success],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: _teal.withValues(alpha: 0.30),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: _v4Success.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Image.asset(
-                  'assets/gm_logoo.png',
-                  width: 22,
-                  height: 22,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.local_hospital_rounded,
-                    color: Colors.white,
-                    size: 20,
+                child: Center(
+                  child: Text(
+                    _appointment.patientName.isNotEmpty ? _appointment.patientName[0].toUpperCase() : 'P',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
-              const SizedBox(width: 14),
-
+              const SizedBox(width: 16),
+              
               // Patient Name
               Expanded(
-                flex: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'PATIENT NAME',
+                      'PATIENT',
                       style: TextStyle(
-                        fontSize: 8.5,
+                        fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 1.2,
+                        color: _v4TextSecondary.withValues(alpha: 0.8),
+                        letterSpacing: 1.5,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _appointment.patientName,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 20,
                         fontWeight: FontWeight.w900,
-                        color: _slate,
-                        letterSpacing: 0.2,
+                        color: _v4TextPrimary,
+                        letterSpacing: -0.5,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -3317,54 +3577,103 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 20),
-
+              
               // Age / Sex
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'AGE / SEX',
-                    style: TextStyle(
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.grey.shade500,
-                      letterSpacing: 1.2,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _v4CreamBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'AGE / SEX',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: _v4TextSecondary.withValues(alpha: 0.8),
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_appointment.age ?? '--'} / ${_appointment.gender?.isNotEmpty == true ? _appointment.gender![0].toUpperCase() : '-'}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: _slate,
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_appointment.age ?? '--'} / ${_appointment.gender?.isNotEmpty == true ? _appointment.gender![0].toUpperCase() : '-'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _v4TextPrimary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
+          Container(height: 1, color: _v4Divider),
+          const SizedBox(height: 20),
 
-          // - Row 2: Plain Vitals View
+          // - Row 2: Vitals Chips View
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _plainVital('BP', _bpCtrl),
-                const SizedBox(width: 16),
-                _plainVital('SpO2', _spo2Ctrl),
-                const SizedBox(width: 16),
-                _plainVital('Temp', _tempCtrl),
-                const SizedBox(width: 16),
-                _plainVital('Pulse', _pulseCtrl),
-                const SizedBox(width: 16),
-                _plainVital('Wt', _weightCtrl),
+                _v4VitalChip('BP', _bpCtrl.text.isEmpty ? '--' : _bpCtrl.text, Icons.favorite_border_rounded),
+                const SizedBox(width: 12),
+                _v4VitalChip('SpO2', _spo2Ctrl.text.isEmpty ? '--' : '${_spo2Ctrl.text}%', Icons.water_drop_outlined),
+                const SizedBox(width: 12),
+                _v4VitalChip('Temp', _tempCtrl.text.isEmpty ? '--' : '${_tempCtrl.text}°F', Icons.thermostat_rounded),
+                const SizedBox(width: 12),
+                _v4VitalChip('Pulse', _pulseCtrl.text.isEmpty ? '--' : '${_pulseCtrl.text} bpm', Icons.monitor_heart_outlined),
+                const SizedBox(width: 12),
+                _v4VitalChip('Wt', _weightCtrl.text.isEmpty ? '--' : '${_weightCtrl.text} kg', Icons.scale_rounded),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _v4VitalChip(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _v4CreamBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: _v4PrimaryGreen),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: _v4TextSecondary,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: _v4TextPrimary,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -3705,101 +4014,172 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
     );
   }
 
-  // --- Floating dock -----------------------------------------
-  Widget _buildFloatingDock() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
+  // --- Bottom Actions (PDF, Print, etc.) --------------------------------
+  Widget _buildBottomActions() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+      decoration: BoxDecoration(
+        color: _v4White,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _dockBtn(
-                icon: Icons.medication_rounded,
-                label: 'Rx',
-                color: _teal,
-                badge: _prescribedMeds.isNotEmpty
-                    ? '${_prescribedMeds.length}'
-                    : null,
-                active: _rxCardVisible,
-                onTap: () {
-                  setState(() => _rxCardVisible = !_rxCardVisible);
-                  if (_rxCardVisible) {
-                    _rxCardMinimized = false;
-                    _rxCardAnimCtrl.forward(from: 0);
-                  } else
-                    _rxCardAnimCtrl.reverse();
-                },
-              ),
-              const SizedBox(height: 6),
-              _dockBtn(
-                icon: Icons.science_rounded,
-                label: 'Lab',
-                color: const Color(0xFF7C3AED),
-                badge: _selectedTests.isNotEmpty
-                    ? '${_selectedTests.length}'
-                    : null,
-                active: _showLabPanel,
-                onTap: () {
-                  setState(() => _showLabPanel = !_showLabPanel);
-                  if (_showLabPanel)
-                    _labAnimCtrl.forward(from: 0);
-                  else
-                    _labAnimCtrl.reverse();
-                },
-              ),
-            ],
-          ),
-        ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _v4ActionItem(Icons.picture_as_pdf_rounded, 'Save PDF', _exportPdf),
+          const SizedBox(height: 12),
+          _v4ActionItem(Icons.print_rounded, 'Print', _printPrescription),
+          const SizedBox(height: 12),
+          _v4ActionItem(Icons.share_rounded, 'Share', _sharePrescription),
+          const SizedBox(height: 12),
+          _v4ActionItem(Icons.wechat_rounded, 'WhatsApp', _shareViaWhatsApp),
+          const SizedBox(height: 12),
+          _v4ActionItem(Icons.email_rounded, 'Email', _shareViaEmail),
+        ],
       ),
     );
   }
 
-  Widget _dockBtn({
+  Future<void> _shareViaWhatsApp() async {
+    final pdf = await _generatePrescriptionPdf();
+    final bytes = await pdf.save();
+    await Share.shareXFiles([
+      XFile.fromData(
+        bytes,
+        name: 'Prescription_${_appointment.patientName}.pdf',
+        mimeType: 'application/pdf',
+      ),
+    ], text: 'Please find attached the prescription for ${_appointment.patientName} from GM Hospital.\n\nRegards,\nDr. ${_doctor.fullName}');
+  }
+
+  Future<void> _shareViaEmail() async {
+    final pdf = await _generatePrescriptionPdf();
+    final bytes = await pdf.save();
+    await Share.shareXFiles([
+      XFile.fromData(
+        bytes,
+        name: 'Prescription_${_appointment.patientName}.pdf',
+        mimeType: 'application/pdf',
+      ),
+    ], subject: 'Prescription: ${_appointment.patientName}', text: 'Please find attached the prescription for ${_appointment.patientName} from GM Hospital.');
+  }
+
+  // --- Floating Bottom Toolbar -----------------------------------------
+  Widget _buildFloatingDock() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: _v4White,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _v4DockBtn(
+            icon: Icons.medication_rounded,
+            label: 'Rx',
+            isActive: _rxCardVisible,
+            badge: _prescribedMeds.isNotEmpty ? '${_prescribedMeds.length}' : null,
+            onTap: () {
+              setState(() => _rxCardVisible = !_rxCardVisible);
+              if (_rxCardVisible) {
+                _rxCardMinimized = false;
+                _rxCardAnimCtrl.forward(from: 0);
+              } else {
+                _rxCardAnimCtrl.reverse();
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _v4DockBtn(
+            icon: Icons.science_rounded,
+            label: 'Lab',
+            isActive: _showLabPanel,
+            badge: _selectedTests.isNotEmpty ? '${_selectedTests.length}' : null,
+            onTap: () {
+              setState(() => _showLabPanel = !_showLabPanel);
+              if (_showLabPanel) {
+                _labAnimCtrl.forward(from: 0);
+              } else {
+                _labAnimCtrl.reverse();
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _v4DockBtn(icon: Icons.lightbulb_rounded, label: 'Advice', isActive: false, onTap: () {
+            setState(() {
+              _isDigitalMode = false; // Auto-switch to Note mode so it's visible
+              _notesCtrl.text += '\n\nAdvice:\n- ';
+            });
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added Advice Section')));
+          }),
+          const SizedBox(width: 8),
+          _v4DockBtn(icon: Icons.calendar_month_rounded, label: 'Follow-up', isActive: false, onTap: () {
+            setState(() {
+              _isDigitalMode = false; // Auto-switch to Note mode so it's visible
+              _notesCtrl.text += '\n\nFollow-up: After 5 days.';
+            });
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added Follow-up Section')));
+          }),
+          const SizedBox(width: 8),
+          _v4DockBtn(icon: Icons.mic_rounded, label: 'Voice', isActive: _isListening, onTap: () {
+            if (_isListening) {
+              _stopListening();
+            } else {
+              _startListening();
+            }
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _v4DockBtn({
     required IconData icon,
     required String label,
-    required Color color,
-    required String? badge,
-    required bool active,
+    required bool isActive,
+    String? badge,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            width: 52,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: active ? color : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+              color: isActive ? _v4PrimaryGreen : Colors.transparent,
+              borderRadius: BorderRadius.circular(24),
             ),
-            child: Column(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 20, color: active ? Colors.white : color),
-                const SizedBox(height: 3),
+                Icon(icon, size: 18, color: isActive ? _v4White : _v4TextSecondary),
+                const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: active ? Colors.white : color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isActive ? _v4White : _v4TextSecondary,
                   ),
                 ),
               ],
@@ -3807,17 +4187,21 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
           ),
           if (badge != null)
             Positioned(
-              top: 4,
-              right: 4,
+              top: -4,
+              right: -4,
               child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: _v4Error,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _v4White, width: 1.5),
+                ),
                 child: Text(
                   badge,
                   style: const TextStyle(
-                    fontSize: 7,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 9,
+                    color: _v4White,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
@@ -4287,10 +4671,21 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
       key: key,
       width: pageWidth,
       height: pageHeight,
-      color: const Color(0xFFF3EFE6), // warm-white paper
+      decoration: BoxDecoration(
+        color: _v4White,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
       child: Stack(
         children: [
-          // - Drawing canvas (isolated RepaintBoundary  no full-screen setState)
+          // - Drawing canvas (isolated RepaintBoundary — no full-screen setState)
           Positioned.fill(
             child: DrawingCanvas(
               controller: _drawCtrl,
@@ -4312,95 +4707,104 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
   // --- Side toolbar -----------------------------------------
   Widget _buildSideToolbar(R r) {
     return Positioned(
-      left: 6,
-      top: r.isPhone ? 90.0 : 130.0,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.88),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                ),
-              ],
+      left: 16,
+      top: r.isPhone ? 140.0 : 180.0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+        decoration: BoxDecoration(
+          color: _v4White,
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            child: Column(
-              children: [
-                _toolItem(Icons.edit_rounded, 'Pen', Colors.black),
-                _toolItem(Icons.brush_rounded, 'Marker', Colors.orange),
-                _toolItem(
-                  Icons.auto_fix_normal_rounded,
-                  'Eraser',
-                  Colors.blueGrey,
-                ),
-                const SizedBox(height: 16),
-                _div(),
-                const SizedBox(height: 16),
-                _colorDot(Colors.black),
-                _colorDot(const Color(0xFF0284C7)),
-                _colorDot(const Color(0xFFDC2626)),
-                _colorDot(_teal),
-                _colorDot(const Color(0xFF7C3AED)),
-                const SizedBox(height: 16),
-                _div(),
-                const SizedBox(height: 16),
-                _sizeBtn(1.5, 'S'),
-                _sizeBtn(3.5, 'M'),
-                const SizedBox(height: 16),
-                _div(),
-                const SizedBox(height: 8),
-                _toolAction(
-                  Icons.undo_rounded,
-                  Colors.blueGrey,
-                  () => _drawCtrl.undo(),
-                ),
-                const SizedBox(height: 4),
-                _toolAction(
-                  Icons.delete_sweep_rounded,
-                  Colors.redAccent,
-                  () => _drawCtrl.clearPage(),
-                ),
-              ],
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _v4ToolItem(Icons.edit_rounded, 'Pen', tooltip: 'Pen'),
+            const SizedBox(height: 12),
+            _v4ToolItem(Icons.brush_rounded, 'Marker', tooltip: 'Highlighter'),
+            const SizedBox(height: 12),
+            _v4ToolItem(Icons.auto_fix_normal_rounded, 'Eraser', tooltip: 'Eraser'),
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: SizedBox(width: 20, child: Divider(height: 1, color: _v4Divider)),
             ),
+            
+            _colorDot(Colors.black),
+            const SizedBox(height: 12),
+            _colorDot(const Color(0xFF0284C7)),
+            const SizedBox(height: 12),
+            _colorDot(const Color(0xFFDC2626)),
+            const SizedBox(height: 12),
+            _colorDot(_v4PrimaryGreen),
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: SizedBox(width: 20, child: Divider(height: 1, color: _v4Divider)),
+            ),
+            
+            _v4ActionItem(Icons.undo_rounded, 'Undo', () => _drawCtrl.undo()),
+            const SizedBox(height: 12),
+            _v4ActionItem(Icons.delete_sweep_rounded, 'Clear', () => _drawCtrl.clearPage()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _v4ToolItem(IconData icon, String toolName, {required String tooltip}) {
+    final bool isSelected = _drawCtrl.tool == toolName;
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _drawCtrl.tool = toolName);
+          HapticFeedback.selectionClick();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: isSelected ? _v4PrimaryGreen : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: isSelected ? Colors.white : _v4TextSecondary,
           ),
         ),
       ),
     );
   }
 
-  Widget _div() => Container(width: 18, height: 1, color: Colors.black12);
-
-  Widget _toolItem(IconData icon, String type, Color color) {
-    final active = _drawCtrl.tool == type;
-    return GestureDetector(
-      onTap: () => setState(() {
-        _drawCtrl.tool = type;
-        // When switching to Marker set its own size; Pen keeps current size
-        if (type == 'Marker') {
-          _drawCtrl.strokeSize = 12.0;
-          _drawCtrl.strokeColor = Colors.orange;
-        } else if (type == 'Pen') {
-          _drawCtrl.strokeColor = Colors.black;
-        }
-      }),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        margin: const EdgeInsets.only(bottom: 6),
-        decoration: BoxDecoration(
-          color: active ? _teal : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: active ? Colors.white : Colors.black45,
-          size: 20,
+  Widget _v4ActionItem(IconData icon, String tooltip, VoidCallback onTap) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: () {
+          onTap();
+          HapticFeedback.mediumImpact();
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: _v4TextSecondary,
+          ),
         ),
       ),
     );
@@ -4630,8 +5034,19 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
                 children: [
                   Expanded(
                     child: Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.fromLTRB(40, 20, 40, 20),
+                      margin: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
                       child: TextField(
                         controller: _notesCtrl,
                         focusNode: _notesFocusNode,
@@ -4639,17 +5054,17 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           height: 1.8,
-                          color: _slate,
+                          color: _v4TextPrimary,
                           fontWeight: FontWeight.w500,
                         ),
                         decoration: InputDecoration(
                           hintText:
                               'Start clinical documentation here...\n\nTap the magic wand for templates or use voice dictation.',
                           hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 16,
+                            color: _v4TextSecondary.withValues(alpha: 0.5),
+                            fontSize: 18,
                             height: 1.8,
                           ),
                           border: InputBorder.none,
@@ -4661,45 +5076,63 @@ class _PrescriptionScreenState extends State<PrescriptionScreen>
                     Container(
                       height: 280,
                       margin: const EdgeInsets.only(
-                        left: 40,
-                        right: 40,
+                        left: 24,
+                        right: 24,
                         bottom: 80,
-                        top: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3EFE6),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.blueGrey.withValues(alpha: 0.2),
-                        ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
                           // Stylus Feature Bar
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                              horizontal: 24,
+                              vertical: 16,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
-                              ),
-                              border: Border.all(
-                                color: Colors.blueGrey.withValues(alpha: 0.1),
-                              ),
+                            decoration: const BoxDecoration(
+                              color: Colors.transparent,
                             ),
                             child: Row(
                               children: [
-                                Text(
-                                  'STYLUS INPUT',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.blueGrey.shade400,
-                                    letterSpacing: 1.2,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'STYLUS INPUT',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.blueGrey.shade400,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    if (_isAIProcessing) ...[
+                                      const SizedBox(width: 12),
+                                      const SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: _v4PrimaryGreen),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'AI Contextualizing...',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: _v4PrimaryGreen,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 const Spacer(),
                                 _stylusAction(

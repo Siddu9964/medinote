@@ -1,126 +1,110 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  COMMAND CENTER DESIGN TOKENS — Medinote Clinical Interface
+//  CLINICAL EDITORIAL DESIGN TOKENS — Medinote 
 //  All visual decisions are centralized here.
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── Color System ────────────────────────────────────────────────────────────
 
 class AppColors {
-  // ── Core Clinical Brand ─────────────────────────────────────────────────
-  static const Color primary         = Color(0xFF1F6B4A); // Forest Teal
-  static const Color primaryDark     = Color(0xFF1F6B4A); // Dark Forest
-  static const Color primaryLight    = Color(0xFFBBF7D0); // Clinical Mint
-  static const Color secondary       = Color(0xFF475569); // Slate Gray
-  static const Color accent          = Color(0xFFBBF7D0); // Clinical Mint
+  // ── Core Clinical Brand (Clinical Editorial Spec) ───────────────────────
+  static const Color ink             = Color(0xFF0A1214);
+  static const Color panelDark1      = Color(0xFF0B2A2C);
+  static const Color panelDark2      = Color(0xFF0E1A1C);
+  
+  static const Color teal            = Color(0xFF14C6AE); // Positive/normal
+  static const Color tealDeep        = Color(0xFF0C8C79);
+  static const Color tealGlow        = Color(0x5914C6AE); // rgba(20,198,174,0.35)
+  static const Color gold            = Color(0xFFE3B15B); // Premium accents
+  
+  static const Color coral           = Color(0xFFFF6B57); // Urgent/attention
+  static const Color coralTint       = Color(0xFFFFF0ED); 
 
-  // ── Light Surface System ────────────────────────────────────────────────
-  static const Color background      = Color(0xFFF3EFE6); // Parchment
-  static const Color surface         = Color(0xFFFFFFFF); // Pure White
-  static const Color cardBg          = Color(0xFFFFFFFF); // White Card
-  static const Color border          = Color(0xFFE2E8F0); // Soft border
-  static const Color divider         = Color(0xFFF3EFE6); // Very subtle divider
+  static const Color paper           = Color(0xFFF6F8F7); // App background
+  static const Color card            = Color(0xFFFFFFFF); // Card surfaces
+  static const Color line            = Color(0xFFE7ECEA); // Borders/dividers
+  
+  static const Color muted           = Color(0xFF6B7680); // Secondary text
+  static const Color mutedSoft       = Color(0xFF9AA6A2); // Tertiary text
+  static const Color textMain        = Color(0xFF101B1D); // Primary body text
 
-  // ── Text Hierarchy ───────────────────────────────────────────────────────
-  static const Color textPrimary     = Color(0xFF0F172A); // Deep Slate
-  static const Color textSecondary   = Color(0xFF64748B); // Muted Slate
-  static const Color textTertiary    = Color(0xFF94A3B8); // Light Slate
+  // ── Backward Compatibility Mappings ──────────────────────────────────────
+  static const Color primary         = tealDeep;
+  static const Color primaryDark     = panelDark1;
+  static const Color primaryLight    = Color(0xFFE7F3F1);
+  static const Color secondary       = muted;
+  static const Color accent          = gold;
+  static const Color background      = paper;
+  static const Color surface         = card;
+  static const Color cardBg          = card;
+  static const Color border          = line;
+  static const Color divider         = line;
+  
+  static const Color textPrimary     = textMain;
+  static const Color textSecondary   = muted;
+  static const Color textTertiary    = mutedSoft;
+  
+  static const Color success         = teal;
+  static const Color successLight    = Color(0xFFE7F3F1);
+  static const Color warning         = gold;
+  static const Color warningLight    = Color(0xFFFFF4D9);
+  static const Color error           = coral;
+  static const Color errorLight      = coralTint;
+  static const Color info            = Color(0xFF3B82F6);
+  static const Color infoLight       = Color(0xFFDBEAFE);
 
-  // ── Status Colors ────────────────────────────────────────────────────────
-  static const Color success         = Color(0xFF22C55E); // Clinical Green
-  static const Color successLight    = Color(0xFFDCFCE7); // Green tint
-  static const Color warning         = Color(0xFFF59E0B); // Warning Amber
-  static const Color warningLight    = Color(0xFFFEF3C7); // Amber tint
-  static const Color error           = Color(0xFFEF4444); // Error Red
-  static const Color errorLight      = Color(0xFFFEE2E2); // Red tint
-  static const Color info            = Color(0xFF3B82F6); // Info Blue
-  static const Color infoLight       = Color(0xFFDBEAFE); // Blue tint
+  static const Color cmdBackground   = ink;
+  static const Color cmdSurface      = panelDark1;
+  static const Color cmdPanel        = panelDark2;
+  static const Color cmdBorder       = Color(0xFF30363D);
+  static const Color cmdBorderLight  = Color(0xFF3D444D);
+  static const Color cmdText         = Colors.white;
+  static const Color cmdTextMuted    = mutedSoft;
+  static const Color cmdTextFaint    = muted;
+  static const Color cmdTeal         = teal;
+  static const Color cmdTealDim      = tealDeep;
 
-  // ── Command Center Dark System ───────────────────────────────────────────
-  // Used for high-authority areas: AppBars, headers, sidebars
-  static const Color cmdBackground   = Color(0xFF1F6B4A); // Dark Forest
-  static const Color cmdSurface      = Color(0xFF161B22); // Elevated Surface
-  static const Color cmdPanel        = Color(0xFF21262D); // Panel background
-  static const Color cmdBorder       = Color(0xFF30363D); // Dark border
-  static const Color cmdBorderLight  = Color(0xFF3D444D); // Lighter dark border
-  static const Color cmdText         = Color(0xFFE6EDF3); // Primary text on dark
-  static const Color cmdTextMuted    = Color(0xFF8D96A0); // Muted text on dark
-  static const Color cmdTextFaint    = Color(0xFF4A5568); // Faint text on dark
-  static const Color cmdTeal         = Color(0xFF1F6B4A); // Bright teal on dark
-  static const Color cmdTealDim      = Color(0xFF1F6B4A); // Dimmer teal on dark
+  static const Color headerStart     = panelDark1;
+  static const Color headerEnd       = panelDark2;
+  static const Color headerAccent    = teal;
 
-  // ── Dashboard Header (Deep Clinical Authority) ───────────────────────────
-  static const Color headerStart     = Color(0xFF1F6B4A); // Dark Forest Start
-  static const Color headerEnd       = Color(0xFF1F6B4A); // Dark Forest End
-  static const Color headerAccent    = Color(0xFFBBF7D0); // Clinical Mint accent
-
-  // ── Avatar Palette ───────────────────────────────────────────────────────
   static const List<Color> avatarPalette = [
-    Color(0xFF6366F1), // Indigo
-    Color(0xFF0EA5E9), // Sky
-    Color(0xFF8B5CF6), // Violet
-    Color(0xFFEC4899), // Pink
-    Color(0xFFF59E0B), // Amber
-    Color(0xFF10B981), // Emerald
-    Color(0xFFEF4444), // Red
+    Color(0xFF6366F1), Color(0xFF0EA5E9), Color(0xFF8B5CF6), Color(0xFFEC4899),
+    gold, teal, coral
   ];
 
-  // ── Legacy HealFlow Palette (kept for backward compat) ──────────────────
-  static const Color darkAppBackground  = Color(0xFF040F0E);
-  static const Color deepMedicalTeal    = Color(0xFF1F6B4A);
-  static const Color darkCardBg         = Color(0xFF1C1F26);
-  static const Color vibrantTeal        = Color(0xFF1F6B4A);
-  static const Color accentRed          = Color(0xFFF43F5E);
-  static const Color accentOrange       = Color(0xFFFB923C);
+  static const Color darkAppBackground  = ink;
+  static const Color deepMedicalTeal    = tealDeep;
+  static const Color darkCardBg         = panelDark2;
+  static const Color vibrantTeal        = teal;
+  static const Color accentRed          = coral;
+  static const Color accentOrange       = gold;
   static const Color accentPurple       = Color(0xFF8B5CF6);
-  static const Color tealGradientStart  = Color(0xFF1F6B4A);
-  static const Color tealGradientEnd    = Color(0xFF1F6B4A);
-  static const Color darkFieldBg        = Color(0xFF1F2937);
-  static const Color glassWhite         = Color(0xFFFFFFFF);
-  static const Color vibrantTealStart   = Color(0xFF1F6B4A);
-  static const Color vibrantTealEnd     = Color(0xFF1F6B4A);
+  static const Color tealGradientStart  = teal;
+  static const Color tealGradientEnd    = tealDeep;
+  static const Color darkFieldBg        = panelDark1;
+  static const Color glassWhite         = Colors.white;
+  static const Color vibrantTealStart   = teal;
+  static const Color vibrantTealEnd     = tealDeep;
   static const Color vibrantBlueStart   = Color(0xFF4A90E2);
   static const Color vibrantBlueEnd     = Color(0xFF6EC6FF);
   static const Color vibrantPurpleStart = Color(0xFF9B5DE5);
   static const Color vibrantPurpleEnd   = Color(0xFFC77DFF);
-  static const Color vibrantOrangeStart = Color(0xFFFF9F43);
+  static const Color vibrantOrangeStart = gold;
   static const Color vibrantOrangeEnd   = Color(0xFFFFC371);
-  static const Color mintBg             = Color(0xFFF3EFE6);
+  static const Color mintBg             = paper;
 
-  // ── Gradients ────────────────────────────────────────────────────────────
-  static const Gradient tealGradient = LinearGradient(
-    colors: [vibrantTealStart, vibrantTealEnd],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-  static const Gradient blueGradient = LinearGradient(
-    colors: [vibrantBlueStart, vibrantBlueEnd],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-  static const Gradient purpleGradient = LinearGradient(
-    colors: [vibrantPurpleStart, vibrantPurpleEnd],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-  static const Gradient orangeGradient = LinearGradient(
-    colors: [vibrantOrangeStart, vibrantOrangeEnd],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static const Gradient tealGradient = LinearGradient(colors: [teal, tealDeep], begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const Gradient blueGradient = LinearGradient(colors: [vibrantBlueStart, vibrantBlueEnd], begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const Gradient purpleGradient = LinearGradient(colors: [vibrantPurpleStart, vibrantPurpleEnd], begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const Gradient orangeGradient = LinearGradient(colors: [gold, vibrantOrangeEnd], begin: Alignment.topLeft, end: Alignment.bottomRight);
   static const Gradient primaryGradient = tealGradient;
-
-  // ── Command Center Header Gradient ───────────────────────────────────────
-  static const Gradient cmdHeaderGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [headerStart, headerEnd],
-  );
+  static const Gradient cmdHeaderGradient = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [headerStart, headerEnd]);
 }
 
 // ── Spacing System ──────────────────────────────────────────────────────────
-
 class AppSpacing {
   static const double xs   = 4.0;
   static const double sm   = 8.0;
@@ -135,364 +119,212 @@ class AppSpacing {
 }
 
 // ── Border Radius System ─────────────────────────────────────────────────────
-
 class AppRadius {
-  static const double xs     = 6.0;   // tiny chips
-  static const double sm     = 8.0;   // status badges
-  static const double md     = 12.0;  // buttons
-  static const double lg     = 16.0;  // standard cards
-  static const double xl     = 20.0;  // large cards
-  static const double xl2    = 24.0;  // panels
-  static const double xl3    = 32.0;  // dialogs
+  static const double xs     = 8.0;   // badges
+  static const double sm     = 12.0;  // buttons
+  static const double md     = 16.0;  // small cards
+  static const double lg     = 22.0;  // large cards
+  static const double xl     = 28.0;  
+  static const double xl2    = 34.0;  // hero bottom radius
+  static const double xl3    = 40.0;  
   static const double pill   = 100.0; // pills / tabs
 }
 
 // ── Shadow System ────────────────────────────────────────────────────────────
-
 class AppShadows {
   static List<BoxShadow> get subtle => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.04),
-      blurRadius: 8,
-      offset: const Offset(0, 2),
-    ),
+    BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
   ];
-
   static List<BoxShadow> get medium => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.08),
-      blurRadius: 16,
-      offset: const Offset(0, 4),
-    ),
+    BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4)),
   ];
-
   static List<BoxShadow> get neoDiffuse => [
-    BoxShadow(
-      color: AppColors.primary.withValues(alpha: 0.06),
-      blurRadius: 32,
-      spreadRadius: 4,
-      offset: const Offset(0, 16),
-    ),
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.03),
-      blurRadius: 12,
-      spreadRadius: -2,
-      offset: const Offset(0, 4),
-    ),
+    BoxShadow(color: AppColors.teal.withValues(alpha: 0.06), blurRadius: 32, spreadRadius: 4, offset: const Offset(0, 16)),
+    BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 12, spreadRadius: -2, offset: const Offset(0, 4)),
   ];
-
   static List<BoxShadow> get elevated => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.14),
-      blurRadius: 30,
-      offset: const Offset(0, 10),
-    ),
+    BoxShadow(color: AppColors.ink.withValues(alpha: 0.22), blurRadius: 40, spreadRadius: -14, offset: const Offset(0, 18)),
   ];
+  static List<BoxShadow> get cardFloat => elevated; // Standard shadow for Clinical Editorial
 
-  static List<BoxShadow> tealGlow({double intensity = 0.28}) => [
-    BoxShadow(
-      color: AppColors.primary.withValues(alpha: intensity),
-      blurRadius: 20,
-      offset: const Offset(0, 6),
-    ),
+  static List<BoxShadow> get navPill => [
+    BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 32, offset: const Offset(0, 12)),
+    BoxShadow(color: AppColors.teal.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 4)),
   ];
-
+  static List<BoxShadow> get glass => [
+    BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 8)),
+  ];
+  static List<BoxShadow> tealGlow({double intensity = 0.35}) => [
+    BoxShadow(color: AppColors.teal.withValues(alpha: intensity), blurRadius: 20, offset: const Offset(0, 6)),
+  ];
   static List<BoxShadow> colorGlow(Color color, {double intensity = 0.25}) => [
-    BoxShadow(
-      color: color.withValues(alpha: intensity),
-      blurRadius: 16,
-      offset: const Offset(0, 5),
-    ),
+    BoxShadow(color: color.withValues(alpha: intensity), blurRadius: 16, offset: const Offset(0, 5)),
   ];
 }
 
 // ── Typography System ────────────────────────────────────────────────────────
-
 class AppStyles {
-  // ── Section / Overline labels ────────────────────────────────────────────
-  static const TextStyle sectionLabel = TextStyle(
-    fontSize: 10,
-    fontWeight: FontWeight.w900,
-    letterSpacing: 1.5,
-    color: AppColors.textSecondary,
-    height: 1.2,
+  // Display / human moments
+  static TextStyle get editorialHeading => GoogleFonts.newsreader(
+    fontSize: 26, fontWeight: FontWeight.w600, fontStyle: FontStyle.italic, color: AppColors.textMain, letterSpacing: -0.01,
+  );
+  
+  static TextStyle get editorialSection => GoogleFonts.newsreader(
+    fontSize: 18, fontWeight: FontWeight.w600, fontStyle: FontStyle.italic, color: AppColors.textMain, letterSpacing: -0.01,
   );
 
-  static TextStyle sectionLabelOn(Color color) =>
-      sectionLabel.copyWith(color: color);
-
-  // ── Metric / Number displays ─────────────────────────────────────────────
-  static const TextStyle metricHero = TextStyle(
-    fontSize: 32,
-    fontWeight: FontWeight.w900,
-    letterSpacing: -1.0,
-    color: AppColors.textPrimary,
-    height: 1.0,
+  // Functional UI
+  static TextStyle get functionalBody => GoogleFonts.inter(
+    fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textMain, height: 1.6,
+  );
+  static TextStyle get functionalLabel => GoogleFonts.inter(
+    fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.1,
   );
 
-  static const TextStyle metricLarge = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w900,
-    letterSpacing: -0.5,
-    color: AppColors.textPrimary,
-    height: 1.0,
+  // Data / Clinical
+  static TextStyle get clinicalData => GoogleFonts.ibmPlexMono(
+    fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textMain,
   );
 
-  static const TextStyle metricMedium = TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.w900,
-    letterSpacing: -0.3,
-    color: AppColors.textPrimary,
-    height: 1.0,
-  );
-
-  // ── Screen-level headings ────────────────────────────────────────────────
-  static const TextStyle commandTitle = TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.w900,
-    letterSpacing: -0.5,
-    color: AppColors.textPrimary,
-    height: 1.2,
-  );
-
-  static const TextStyle heading = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.w800,
-    color: AppColors.textPrimary,
-    letterSpacing: -0.75,
-    height: 1.2,
-  );
-
-  static const TextStyle subheading = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w800,
-    color: AppColors.textPrimary,
-    letterSpacing: -0.3,
-    height: 1.3,
-  );
-
-  static const TextStyle profileName = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w800,
-    color: Colors.white,
-    letterSpacing: -0.5,
-  );
-
-  // ── Body ─────────────────────────────────────────────────────────────────
-  static const TextStyle bodyBold = TextStyle(
-    fontSize: 15,
-    color: AppColors.textPrimary,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.1,
-  );
-
-  static const TextStyle body = TextStyle(
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: FontWeight.w500,
-    height: 1.6,
-  );
-
-  // ── Labels / Captions ────────────────────────────────────────────────────
-  static const TextStyle caption = TextStyle(
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.1,
-  );
-
-  static const TextStyle captionBold = TextStyle(
-    fontSize: 12,
-    color: AppColors.textPrimary,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 0.2,
-  );
-
-  static const TextStyle microLabel = TextStyle(
-    fontSize: 10,
-    color: AppColors.textTertiary,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.5,
-  );
-
-  // ── Dark surface text ────────────────────────────────────────────────────
-  static const TextStyle darkCaption = TextStyle(
-    fontSize: 12,
-    color: Colors.white60,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.2,
-  );
-
-  static const TextStyle darkBody = TextStyle(
-    fontSize: 14,
-    color: AppColors.cmdText,
-    fontWeight: FontWeight.w500,
-    height: 1.6,
-  );
-
-  static const TextStyle darkHeading = TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.w900,
-    color: AppColors.cmdText,
-    letterSpacing: -0.5,
-  );
+  // Backward compatibility mappings
+  static TextStyle get sectionLabel => functionalLabel.copyWith(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, height: 1.2);
+  static TextStyle sectionLabelOn(Color color) => sectionLabel.copyWith(color: color);
+  static TextStyle get metricHero => GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1.0, color: AppColors.textPrimary, height: 1.0);
+  static TextStyle get metricLarge => GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: 0, color: AppColors.textPrimary, height: 1.0);
+  static TextStyle get metricMedium => GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: AppColors.textPrimary, height: 1.0);
+  static TextStyle get commandTitle => editorialSection.copyWith(fontSize: 22);
+  static TextStyle get heading => editorialHeading;
+  static TextStyle get subheading => editorialSection;
+  static TextStyle get profileName => editorialHeading.copyWith(color: Colors.white, fontSize: 24);
+  static TextStyle get bodyBold => functionalBody.copyWith(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.1);
+  static TextStyle get body => functionalBody;
+  static TextStyle get caption => functionalLabel;
+  static TextStyle get captionBold => functionalLabel.copyWith(fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: 0.2);
+  static TextStyle get microLabel => clinicalData.copyWith(fontSize: 10, color: AppColors.textTertiary, fontWeight: FontWeight.w500);
+  static TextStyle get darkCaption => functionalLabel.copyWith(color: Colors.white60);
+  static TextStyle get darkBody => functionalBody.copyWith(color: AppColors.cmdText);
+  static TextStyle get darkHeading => editorialHeading.copyWith(color: AppColors.cmdText);
 }
 
 // ── Decoration Presets ───────────────────────────────────────────────────────
-
 class AppDecorations {
-  // ── Standard light card ─────────────────────────────────────────────────
   static BoxDecoration standardCard = BoxDecoration(
-    color: AppColors.surface,
-    borderRadius: BorderRadius.circular(AppRadius.lg),
-    border: Border.all(color: AppColors.border, width: 1),
-    boxShadow: AppShadows.subtle,
+    color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.lg),
+    border: Border.all(color: AppColors.border, width: 1), boxShadow: AppShadows.subtle,
   );
-
-  // ── Elevated card ────────────────────────────────────────────────────────
   static BoxDecoration elevatedCard = BoxDecoration(
-    color: AppColors.surface,
-    borderRadius: BorderRadius.circular(AppRadius.lg),
-    border: Border.all(color: AppColors.border.withValues(alpha: 0.5), width: 1),
-    boxShadow: AppShadows.medium,
+    color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.lg),
+    border: Border.all(color: AppColors.border.withValues(alpha: 0.5), width: 1), boxShadow: AppShadows.cardFloat,
   );
-
-  // ── Premium dark card ────────────────────────────────────────────────────
   static BoxDecoration premiumDarkCard = BoxDecoration(
-    color: AppColors.darkCardBg,
-    borderRadius: BorderRadius.circular(AppRadius.xl2),
-    boxShadow: AppShadows.elevated,
+    color: AppColors.darkCardBg, borderRadius: BorderRadius.circular(AppRadius.xl2), boxShadow: AppShadows.elevated,
   );
-
-  // ── Glass card ───────────────────────────────────────────────────────────
   static BoxDecoration glassCard = BoxDecoration(
-    color: Colors.white.withValues(alpha: 0.1),
-    borderRadius: BorderRadius.circular(32),
+    color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(32),
     border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.2),
-        blurRadius: 30,
-        offset: const Offset(0, 15),
-      ),
-    ],
+    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 30, offset: const Offset(0, 15))],
   );
-
-  // ── Command Center surface ───────────────────────────────────────────────
   static BoxDecoration cmdSurface = BoxDecoration(
-    color: AppColors.cmdSurface,
-    borderRadius: BorderRadius.circular(AppRadius.lg),
+    color: AppColors.cmdSurface, borderRadius: BorderRadius.circular(AppRadius.lg),
     border: Border.all(color: AppColors.cmdBorder, width: 1),
   );
-
-  // ── Teal accent chip ─────────────────────────────────────────────────────
   static BoxDecoration tealChip = BoxDecoration(
-    color: AppColors.primary.withValues(alpha: 0.1),
-    borderRadius: BorderRadius.circular(AppRadius.sm),
-    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 1),
+    color: AppColors.teal.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(AppRadius.sm),
+    border: Border.all(color: AppColors.teal.withValues(alpha: 0.2), width: 1),
   );
-
-  // ── Status chip decorations ──────────────────────────────────────────────
   static BoxDecoration statusActive = BoxDecoration(
-    color: AppColors.success.withValues(alpha: 0.1),
-    borderRadius: BorderRadius.circular(AppRadius.sm),
-    border: Border.all(color: AppColors.success.withValues(alpha: 0.25), width: 1),
+    color: AppColors.teal.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(AppRadius.sm),
+    border: Border.all(color: AppColors.teal.withValues(alpha: 0.25), width: 1),
   );
-
   static BoxDecoration statusCompleted = BoxDecoration(
-    color: AppColors.textTertiary.withValues(alpha: 0.1),
-    borderRadius: BorderRadius.circular(AppRadius.sm),
+    color: AppColors.textTertiary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(AppRadius.sm),
     border: Border.all(color: AppColors.textTertiary.withValues(alpha: 0.2), width: 1),
   );
 
-  // ── Input Decorations ────────────────────────────────────────────────────
   static InputDecoration inputDecoration({required String hintText, Widget? prefixIcon, Widget? suffixIcon}) {
     return InputDecoration(
-      hintText: hintText,
-      hintStyle: AppStyles.caption.copyWith(color: Colors.white60),
-      prefixIcon: prefixIcon,
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: AppColors.darkFieldBg.withValues(alpha: 0.4),
+      hintText: hintText, hintStyle: AppStyles.caption.copyWith(color: Colors.white60),
+      prefixIcon: prefixIcon, suffixIcon: suffixIcon, filled: true, fillColor: AppColors.darkFieldBg.withValues(alpha: 0.4),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.error, width: 1),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.error, width: 1)),
     );
   }
-
   static InputDecoration cssInputDecoration({required String labelText, Widget? suffixIcon}) {
     return InputDecoration(
-      labelText: labelText,
-      labelStyle: const TextStyle(color: Colors.white38, fontSize: 16),
+      labelText: labelText, labelStyle: const TextStyle(color: Colors.white38, fontSize: 16),
       floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
-      suffixIcon: suffixIcon,
-      filled: false,
-      contentPadding: const EdgeInsets.symmetric(vertical: 10),
-      border: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.white10, width: 1.5),
-      ),
-      enabledBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.white10, width: 1.5),
-      ),
-      focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.transparent, width: 0),
-      ),
+      suffixIcon: suffixIcon, filled: false, contentPadding: const EdgeInsets.symmetric(vertical: 10),
+      border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10, width: 1.5)),
+      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10, width: 1.5)),
+      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent, width: 0)),
       errorStyle: const TextStyle(color: AppColors.error, fontSize: 11),
     );
   }
-
-  // ── Clean light input (for light screens) ────────────────────────────────
   static InputDecoration lightInput({required String hintText, Widget? prefixIcon, Widget? suffixIcon}) {
     return InputDecoration(
-      hintText: hintText,
-      hintStyle: AppStyles.caption.copyWith(fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon,
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: AppColors.divider,
+      hintText: hintText, hintStyle: AppStyles.caption.copyWith(fontWeight: FontWeight.w500),
+      prefixIcon: prefixIcon, suffixIcon: suffixIcon, filled: true, fillColor: AppColors.divider,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+    );
+  }
+}
+
+// ── Animation System ─────────────────────────────────────────────────────────
+class AppAnimations {
+  static const Duration fast    = Duration(milliseconds: 180);
+  static const Duration normal  = Duration(milliseconds: 300);
+  static const Duration medium  = Duration(milliseconds: 420);
+  static const Duration slow    = Duration(milliseconds: 550);
+  static const Duration page    = Duration(milliseconds: 400);
+  static const Duration stagger = Duration(milliseconds: 80);
+  static const Curve spring  = Curves.easeOutCubic;
+  static const Curve smooth  = Curves.easeInOutCubic;
+  static const Curve bounce  = Curves.elasticOut;
+  static const Curve decel   = Curves.decelerate;
+}
+
+class AppTransitions {
+  static PageRoute<T> fadeSlide<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: AppAnimations.page, reverseTransitionDuration: AppAnimations.normal,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+        final slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: AppAnimations.spring));
+        return FadeTransition(opacity: fade, child: SlideTransition(position: slide, child: child));
+      },
+    );
+  }
+  static PageRoute<T> slideUp<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: AppAnimations.page, reverseTransitionDuration: AppAnimations.normal,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final slide = Tween<Offset>(begin: const Offset(0, 1.0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: AppAnimations.spring));
+        return SlideTransition(position: slide, child: child);
+      },
+    );
+  }
+  static PageRoute<T> slideRight<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: AppAnimations.page, reverseTransitionDuration: AppAnimations.normal,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final slide = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: AppAnimations.spring));
+        return SlideTransition(position: slide, child: child);
+      },
     );
   }
 }
 
 // ── API Config ───────────────────────────────────────────────────────────────
-
 class ApiConfig {
-  static const String machineIp = "erp.gmhospitals.co.in";
-  
-  // The correct folder on the server is 'medinote', not 'GM_HMS'
+  static const String machineIp = "192.168.0.103";
   static const String baseUrl = "https://$machineIp/medinote/api";
 }
-
-
-//class ApiConfig {
-  // static const String machineIp = "erp.gmhospitals.co.in";
-  // //static const String machineIp = "192.168.0.109";
-  // static const String baseUrl   = "https://$machineIp/medinote/api";
-  // //static const String webBaseUrl = "http://localhost/medinote/api";

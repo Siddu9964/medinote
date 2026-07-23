@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'views/login_screen.dart';
 import 'utils/constants.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -12,7 +13,9 @@ class MyHttpOverrides extends HttpOverrides {
   }
 }
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
 }
@@ -39,7 +42,7 @@ class MyApp extends StatelessWidget {
           error: AppColors.error,
         ),
         scaffoldBackgroundColor: AppColors.background,
-        textTheme: const TextTheme(
+        textTheme: TextTheme(
           displayLarge: AppStyles.heading,
           titleLarge: AppStyles.subheading,
           bodyLarge: AppStyles.body,
