@@ -323,7 +323,7 @@ class AppTransitions {
   }
 }
 
-// ── API Config ───────────────────────────────────────────────────────────────
+// ── API Config ──────────────────────────────────────────────────────────────
 class ApiConfig {
   static const String machineIp = "192.168.0.103";
   static const String baseUrl = "https://$machineIp/medinote/api";

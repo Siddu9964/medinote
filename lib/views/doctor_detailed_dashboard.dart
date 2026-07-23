@@ -13,6 +13,7 @@ import 'prescription_screen.dart';
 import 'clinical_chronicle_screen.dart';
 import '../models/consultation.dart';
 import 'widgets/prescription_viewer.dart';
+import 'login_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  DoctorDetailedDashboard  —  Command Center Edition
@@ -1585,7 +1586,14 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildHospitalBadge(),
-                        _buildProfileAvatar(r),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildProfileAvatar(r),
+                            const SizedBox(width: 16),
+                            _buildLogoutButton(),
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -1688,6 +1696,34 @@ class _DoctorDetailedDashboardState extends State<DoctorDetailedDashboard>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return InkWell(
+      onTap: () async {
+        await SessionManager.logout();
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.logout_rounded,
+          color: Colors.white,
+          size: 22,
+        ),
       ),
     );
   }
